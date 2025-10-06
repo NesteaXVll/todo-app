@@ -26,10 +26,10 @@ tasks.named('test', Test) {
     useJUnitPlatform()
 }
 
-// ShadowJar для локального использования (не для публикации)
+// ShadowJar для локального использования (fat JAR)
 shadowJar {
     archiveBaseName = 'todo-app'
-    archiveClassifier = 'all'  // Добавляем классификатор чтобы отличать от основного JAR
+    archiveClassifier = 'all'  // Добавляем классификатор
     archiveVersion = project.version.toString()
     mergeServiceFiles()
 
@@ -38,7 +38,7 @@ shadowJar {
     }
 }
 
-// Основной JAR для публикации (без зависимостей)
+// Обычный JAR для публикации в релизах
 jar {
     enabled = true
     archiveBaseName = 'todo-app'
@@ -61,7 +61,6 @@ tasks.register('javadocJar', Jar) {
     dependsOn javadoc
 }
 
-// Отключаем предупреждения javadoc для чистого билда
 tasks.named('javadoc') {
     options.addStringOption('Xdoclint:none', '-quiet')
 }
@@ -80,7 +79,6 @@ publishing {
             groupId = project.group
             version = project.version
 
-            // Убедимся, что pom содержит правильные зависимости
             pom {
                 name = 'Todo App'
                 description = 'A simple Todo application'
@@ -122,6 +120,8 @@ publishing {
     }
 }
 
+// Убедимся, что build создает оба JAR
 tasks.named('build') {
+    dependsOn(tasks.named('jar'))
     dependsOn(tasks.named('shadowJar'))
 }
