@@ -1,6 +1,6 @@
 plugins {
     id 'java'
-    id 'application'
+    id 'maven-publish'
     id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
 
@@ -10,10 +10,6 @@ version = findProperty('version') ?: '0.1.0'
 java {
     sourceCompatibility = JavaVersion.VERSION_23
     targetCompatibility = JavaVersion.VERSION_23
-}
-
-application {
-    mainClass = 'org.example.TodoApp'
 }
 
 repositories {
@@ -26,7 +22,7 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
-test {
+tasks.named('test', Test) {
     useJUnitPlatform()
 }
 
@@ -35,10 +31,43 @@ shadowJar {
     archiveClassifier = ''
     archiveVersion = project.version.toString()
     mergeServiceFiles()
+
+    // Явно указываем main class для shadowJar
+    manifest {
+        attributes 'Main-Class': 'org.example.TodoApp'
+    }
 }
 
-// Отключаем обычный jar, используем только shadowJar
-jar.enabled = false
+// Отключаем обычный jar
+tasks.named('jar') {
+    enabled = false
+}
 
 // Убеждаемся, что build зависит от shadowJar
-build.dependsOn shadowJar
+tasks.named('build') {
+    dependsOn(tasks.named('shadowJar'))
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            groupId = 'org.example'
+            artifactId = 'todo-app'
+            version = project.version
+
+            artifact(shadowJar) {
+                classifier = null
+            }
+        }
+    }
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/NesteaXVll/todo-app")
+            credentials {
+                username = project.findProperty("grp.user") ?: System.getenv("GITHUB_ACTOR")
+                password = project.findProperty("grp.key") ?: System.getenv("GITHUB_TOKEN")
+            }
+        }
+    }
+}
