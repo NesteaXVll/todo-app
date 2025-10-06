@@ -5,7 +5,7 @@ plugins {
 }
 
 group = 'org.example'
-version = findProperty('version') ?: '0.1.0'
+version = findProperty('version') ?: '0.2.0'
 
 java {
     sourceCompatibility = JavaVersion.VERSION_23
@@ -26,9 +26,10 @@ tasks.named('test', Test) {
     useJUnitPlatform()
 }
 
+// ShadowJar для локального использования (не для публикации)
 shadowJar {
     archiveBaseName = 'todo-app'
-    archiveClassifier = ''
+    archiveClassifier = 'all'  // Добавляем классификатор чтобы отличать от основного JAR
     archiveVersion = project.version.toString()
     mergeServiceFiles()
 
@@ -37,38 +38,49 @@ shadowJar {
     }
 }
 
-// Создаем обычный JAR для публикации (без зависимостей)
+// Основной JAR для публикации (без зависимостей)
 jar {
     enabled = true
     archiveBaseName = 'todo-app'
     archiveVersion = project.version.toString()
+
+    manifest {
+        attributes 'Main-Class': 'org.example.TodoApp'
+    }
 }
 
-// Создаем источники JAR
+// JAR с исходниками
 java {
     withSourcesJar()
 }
 
-// Создаем Javadoc JAR
+// JAR с документацией
 tasks.register('javadocJar', Jar) {
     archiveClassifier = 'javadoc'
     from javadoc
+    dependsOn javadoc
+}
+
+// Отключаем предупреждения javadoc для чистого билда
+tasks.named('javadoc') {
+    options.addStringOption('Xdoclint:none', '-quiet')
 }
 
 publishing {
     publications {
         mavenJava(MavenPublication) {
-            from components.java
+            // Основной артефакт (JAR)
+            artifact jar
+
+            // Дополнительные артефакты
+            artifact sourcesJar
+            artifact javadocJar
 
             artifactId = 'todo-app'
             groupId = project.group
             version = project.version
 
-            // Добавляем JAR с исходниками и документацией
-            artifact sourcesJar
-            artifact javadocJar
-
-            // Настройка pom.xml для Maven
+            // Убедимся, что pom содержит правильные зависимости
             pom {
                 name = 'Todo App'
                 description = 'A simple Todo application'
@@ -110,7 +122,6 @@ publishing {
     }
 }
 
-// Убеждаемся, что build зависит от shadowJar для локального использования
 tasks.named('build') {
     dependsOn(tasks.named('shadowJar'))
 }
