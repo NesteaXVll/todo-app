@@ -32,42 +32,85 @@ shadowJar {
     archiveVersion = project.version.toString()
     mergeServiceFiles()
 
-    // Явно указываем main class для shadowJar
     manifest {
         attributes 'Main-Class': 'org.example.TodoApp'
     }
 }
 
-// Отключаем обычный jar
-tasks.named('jar') {
-    enabled = false
+// Создаем обычный JAR для публикации (без зависимостей)
+jar {
+    enabled = true
+    archiveBaseName = 'todo-app'
+    archiveVersion = project.version.toString()
 }
 
-// Убеждаемся, что build зависит от shadowJar
-tasks.named('build') {
-    dependsOn(tasks.named('shadowJar'))
+// Создаем источники JAR
+java {
+    withSourcesJar()
+}
+
+// Создаем Javadoc JAR
+tasks.register('javadocJar', Jar) {
+    archiveClassifier = 'javadoc'
+    from javadoc
 }
 
 publishing {
     publications {
         mavenJava(MavenPublication) {
-            groupId = 'org.example'
+            from components.java
+
             artifactId = 'todo-app'
+            groupId = project.group
             version = project.version
 
-            artifact(shadowJar) {
-                classifier = null
+            // Добавляем JAR с исходниками и документацией
+            artifact sourcesJar
+            artifact javadocJar
+
+            // Настройка pom.xml для Maven
+            pom {
+                name = 'Todo App'
+                description = 'A simple Todo application'
+                url = 'https://github.com/NesteaXVll/todo-app'
+
+                licenses {
+                    license {
+                        name = 'MIT License'
+                        url = 'https://opensource.org/licenses/MIT'
+                    }
+                }
+
+                developers {
+                    developer {
+                        id = 'nesteaxvll'
+                        name = 'Your Name'
+                        email = 'your.email@example.com'
+                    }
+                }
+
+                scm {
+                    connection = 'scm:git:git://github.com/NesteaXVll/todo-app.git'
+                    developerConnection = 'scm:git:ssh://github.com:NesteaXVll/todo-app.git'
+                    url = 'https://github.com/NesteaXVll/todo-app'
+                }
             }
         }
     }
+
     repositories {
         maven {
-            name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/NesteaXVll/todo-app")
+            name = 'GitHubPackages'
+            url = uri('https://maven.pkg.github.com/NesteaXVll/todo-app')
             credentials {
-                username = project.findProperty("grp.user") ?: System.getenv("GITHUB_ACTOR")
-                password = project.findProperty("grp.key") ?: System.getenv("GITHUB_TOKEN")
+                username = project.findProperty('gpr.user') ?: System.getenv('GITHUB_ACTOR')
+                password = project.findProperty('gpr.key') ?: System.getenv('GITHUB_TOKEN')
             }
         }
     }
+}
+
+// Убеждаемся, что build зависит от shadowJar для локального использования
+tasks.named('build') {
+    dependsOn(tasks.named('shadowJar'))
 }
